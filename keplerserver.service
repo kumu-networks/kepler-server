@@ -1,0 +1,11 @@
+[Unit]
+Description=KUMU K7 Kepler Repeater
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/env keplerserver
+SyslogIdentifier=keplerserver
+Nice = -20
+
+[Install]
+WantedBy=multi-user.target

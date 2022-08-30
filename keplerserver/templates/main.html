@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <center>
+        <h1>Repeater Controller</h1>
+    </center>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <!-- <script type="text/javascript" src="{{url_for('static', filename='script.js')}}"></script> -->
+    <script type="text/javascript">
+      $( document ).ready(function() {
+        $('#myform input[type=radio]').on('change', function(event) {
+          var result = $(this).val();
+          $('#result').html(result);
+          $('#myform').submit();
+        });
+      });
+    </script>
+    <script type="text/javascript">
+      $( document ).ready(function() {
+        setInterval(  
+          function update_values() {
+                $.getJSON("/_fetch_status",
+                    function(data) {
+                        {% for key, value in tstat_h.items() %}
+                          $("#tstat_{{key}}").text(data.tstat.{{key}})
+                        {% endfor %}
+                        {% for key, value in kstat_h.items() %}
+                          $("#kstat_{{key}}").text(data.kstat.{{key}})
+                        {% endfor %}
+                        if (data.tstat.status == "OK") {
+                          document.getElementById("tstat_status").style.color='green';
+                        } else {
+                          document.getElementById("tstat_status").style.color='red';
+                        }
+                        if (data.kstat.gain.search('OSC') >= 0) {
+                          document.getElementById("kstat_gain").style.color='red';
+                        }
+                    });
+          },
+          3000);
+      });
+    </script>
+
+    <!-- using the flask url_for function to get styles for this page -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='mystyle3.css') }}" />
+
+</head>
+
+
+
+
+    <body>
+
+    <form id="myform" action="/" method="post">
+        <div class="container">
+
+            <!--################################################################################################# -->
+
+            <div id="myDiv_left" style="float: left; margin-left: 5%; width: 500px; height:450px;">
+                <dt>RF Parameters</dt><br>
+                <label for="Center Frequency" >Center Frequency (MHz) : </label>
+                <input type="text" name="center_freq" size="10" value={{config.center_freq}} tabindex="13" required><br><br>
+                <label for="Target Gain" >Target Gain (dB) : </label>
+                <input type="text" name="target_gain" size="16" value={{config.target_gain}} tabindex="14" required><br><br><br>
+
+                    <label for="DL RX-1" >DL RX Atten : </label>
+                    <input type="text" name="dl_rx_1" size="3" value={{config.dl_rx_1}} tabindex="15" required>&emsp;
+                    <input type="text" name="dl_rx_2" size="3" value={{config.dl_rx_2}} tabindex="16" required><br>
+
+                    <label for="UL RX-1" >UL RX Atten : </label>
+                    <input type="text" name="ul_rx_1" size="3" value={{config.ul_rx_1}} tabindex="17" required>&emsp;
+                    <input type="text" name="ul_rx_2" size="3" value={{config.ul_rx_2}} tabindex="18" required><br><br><br>
+
+                <dt style="font-size:200%;">TDD Mode</dt>
+                    <input type="radio" name="tdd_mode" value="1" {{"checked=checked" if config.tdd_mode==1}} tabindex="1">
+                    <label for="tdd_mode" style="color: black">HW</label>
+                    <input type="radio" name="tdd_mode" value="2" {{"checked=checked" if config.tdd_mode==2}} tabindex="19">
+                    <label for="tdd_mode" style="color: black">DL Fixed</label>
+                    <input type="radio" name="tdd_mode" value="3" {{"checked=checked" if config.tdd_mode==3}} tabindex="20">
+                    <label for="tdd_mode" style="color: black">UL Fixed</label><br><br>
+            </div>
+
+            <!-- ################################################################################################ -->
+
+            <div id="myDiv_center" style="width:100px">
+
+                <input type="submit" class="submit_button" id="search" style="height:100px; width:450px; font-size: 32px; font-family: sans-serif; " tabindex="21" value="Configure RF & TDD Sync Parameters"><br><br><br>
+                        <fieldset id="group2" style="height:20; border: 1px outset black; background-color: #EAECEE;">
+                            <dt style="font-size:200%;">Repeater</dt>
+                                <input type="radio" name="rpt_on" value="1" {{"checked=checked" if config.rpt_on==1}} tabindex="1">
+                                <label for="r_set" style="color: green">ON</label>
+                                <input type="radio" name="rpt_on" value="0" {{"checked=checked" if config.rpt_on==0}} tabindex="2">
+                                <label for="r_set" style="color: red">OFF</label>&emsp;&emsp;&emsp;
+
+                        </fieldset><br>
+
+                        <fieldset id="group3" style="height:20; border: 1px outset black; background-color: #EAECEE;">
+                            <dt style="font-size:200%;">Cancellation</dt>
+                                <input type="radio" name="canx_on" value="1" {{"checked=checked" if config.canx_on==1}} tabindex="4">
+                                <label for="canx_set" style="color: green">ON</label>
+                                <input type="radio" name="canx_on" value="0" {{"checked=checked" if config.canx_on==0}} tabindex="5">
+                                <label for="canx_set" style="color: red">OFF</label>&emsp;&emsp;&emsp;
+                        </fieldset><br>
+
+                        <fieldset id="group4" style="height:20; border: 1px outset black; background-color: #EAECEE;">
+                            <dt style="font-size:200%;">Gain Control</dt>
+                                <input type="radio" name="agc_on" value="1" {{"checked=checked" if config.agc_on==1}} tabindex="7">
+                                <label for="gain_control" style="color: green">Auto</label>
+                                <input type="radio" name="agc_on" value="0" {{"checked=checked" if config.agc_on==0}} tabindex="8">
+                                <label for="gain_control" style="color: red">Manual</label>&emsp;
+
+                        </fieldset><br>
+
+
+            </div>
+
+            <!-- ################################################################################################## -->
+
+            <div id="myDiv_right" style="float: right; height:400px;">
+                <dt>TDD Sync Parameters</dt><br><br>
+
+                    <label for="arfcn" >ARFCN :  </label>
+                    <input type="text" name="arfcn" size="18" value={{config.arfcn}} tabindex="22" required><br>
+                    <label for="band" >Band  : </label>
+                    <input type="text" name="band" size="21" value={{config.band}} tabindex="23" required><br><br>
+
+                    <label for="Slot1 DL">Slot 1 - DL slots : </label>
+                    <input type="text"  name="slot1_dl" size="12" value={{config.slot1_dl}} tabindex="24" required><br>
+                    <label for="UL slots 1">Slot 1 - UL slots :</label>
+                    <input type="text" name="slot1_ul" size="12" value={{config.slot1_ul}} tabindex="25" required><br><br>
+
+                    <label for="DL slots 2">Slot 2 - DL slots : </label>
+                    <input type="text"  name="slot2_dl" size="12" value={{config.slot2_dl}} tabindex="26" required><br>
+                    <label for="UL slots 2">Slot 2 - UL slots : </label>
+                    <input type="text" name="slot2_ul" size="12" value={{config.slot2_ul}} tabindex="27" required><br><br>
+
+                    <!-- <h3 style="color:#17202A;font-size:20px;Arial,font-family: sans-serif">Special SF</h3> -->
+                    <label for="special SF - #DL symbols" >Special SF - DL symbols : </label>
+                    <input type="text" name="ssf_symbols_dl" size="5" value={{config.ssf_symbols_dl}} tabindex="28" required><br>
+                    <label for="special SF - #GP symbols" >Special SF - GP symbols : </label>
+                    <input type="text" name="ssf_symbols_gp" size="5" value={{config.ssf_symbols_gp}} tabindex="29" required><br>
+                    <label for="special SF - #UL symbols" >Special SF - UL symbols : </label>
+                    <input type="text" name="ssf_symbols_ul" size="5" value={{config.ssf_symbols_ul}} tabindex="30" required><br><br>
+
+            </div>
+        </div>
+    </form>
+
+            <!-- ################################################################################################## -->
+
+        <div class="myDiv_status_left" >
+            <table style="float: left; margin-left: 200px; width:40%">
+                 <caption style="color:#566573; font-size:300%;font-family: Arial, sans-serif">RF Status</caption>
+
+                    {% for key, value in kstat_h.items() %}
+                        <tr>
+                            <th style="text-align: right; background-color: #D4EFDF; font-size:150%; font-family: Arial, sans-serif; width:10%"> {{ value }} </th>
+                            <td style="text-align: left; font-size:150%; font-family: Arial, sans-serif; width:10%"> <div id="kstat_{{key}}">{{ kstat_v[key] }} </div></td>
+                        </tr>
+                    {% endfor %}
+
+            </table>
+        </div>
+
+        <div class="myDiv_status_right" >
+
+            <table style="float: left; margin-left: 200px; width:20%">
+                <caption style="color:#566573; font-size:300%;font-family: Arial, sans-serif">TDD Sync Status</caption>
+
+                    {% for key, value in tstat_h.items() %}
+                        <tr>
+                            <th style="text-align: left; background-color: #C2DFFF;font-size:150%; font-family: Arial, sans-serif; width:10%"> {{ value }} </th>
+                            <td style="text-align: center; font-size:150%; font-family: Arial, sans-serif; width:5%"> <div id="tstat_{{key}}">{{ tstat_v[key] }} </div></td>
+                        </tr>
+                    {% endfor %}
+
+            </table>
+        </div>
+<!--
+    <div class="container" style="padding-left:100px; padding-right:1px;">
+        <form action="/status_repeater" method="post">
+            <div id="myDiv_left_radio" style=width:350px;">
+                <fieldset id="group1" style="height:20; border: none;">
+                    <dt style="font-size:200%;">Repeater</dt>
+                        <input type="radio" name="r_set" value="1" tabindex="1">
+                        <label for="r_set" style="color: green">ON</label>
+                        <input type="radio" name="r_set"  value="0" checked="checked" tabindex="2">
+                        <label for="r_set" style="color: red">OFF</label><br><br>
+
+                        <input type="submit" style="height:35px; font-size:25px" tabindex="3" value="Submit">
+                </fieldset><br>
+            </div>
+        </form>
+
+        <form action="/status_canx" method="post">
+            <div id="myDiv_left_radio" style="width:350px;">
+                <fieldset id="group2" style="height:20; border: none;">
+                    <dt style="font-size:200%;">Cancellation</dt>
+                        <input type="radio" name="canx_set" value="1" tabindex="4">
+                        <label for="canx_set" style="color: green">ON</label>
+                        <input type="radio" name="canx_set"  value="0" checked="checked" tabindex="5">
+                        <label for="canx_set" style="color: red">OFF</label><br><br>
+
+                        <input type="submit" style="height:35px; font-size:25px" tabindex="6" value="Submit">
+                </fieldset><br>
+            </div>
+        </form>
+
+        <form action="/status_gain_control" method="post">
+            <div id="myDiv_left_radio" style=width:350px;">
+                <fieldset id="group3" style="height:20; border: none;">
+                    <dt style="font-size:200%;">Gain Control</dt>
+                        <input type="radio" name="gain_control" value="1" tabindex="7">
+                        <label for="gain_control" style="color: green">Auto</label>
+                        <input type="radio" name="gain_control"  value="0" checked="checked" tabindex="8">
+                        <label for="gain_control" style="color: red">Manual</label><br><br>
+
+                        <input type="submit" style="height:35px; font-size:25px" tabindex="9" value="Submit">
+                </fieldset><br>
+            </div>
+        </form>
+
+        <form action="/status_sync_module_reset" method="post">
+            <div id="myDiv_left_radio" style=width:350px;">
+                <fieldset id="group5" style="height:20; border: none;">
+                    <dt style="font-size:200%;">Sync Module Reset?</dt>
+                        <input type="radio" name="sync_module_reset" value="1" tabindex="10">
+                        <label for="sync_module_reset" style="color: green">Yes</label>
+                        <input type="radio" name="sync_module_reset"  value="0" checked="checked" tabindex="11">
+                        <label for="sync_module_reset" style="color: red">No</label><br><br>
+
+                        <input type="submit" style="height:35px; font-size:25px" tabindex="12" value="submit">
+                </fieldset><br>
+            </div>
+        </form>
+    </div>
+-->
+
+    </body>
+<!--  </center> -->
+</html>

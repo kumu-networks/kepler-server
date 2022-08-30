@@ -1,0 +1,143 @@
+
+body {
+  background-color: linen;
+  #margin-left: 80px;
+}
+
+dt{
+  color:#566573;
+  font-size:250%;
+  Arial,font-family: sans-serif;
+  #background-color: lightgrey;
+}
+
+label{
+  font-size: 150%;
+  Arial,font-family: sans-serif;
+}
+h1{
+  color:#34495E;
+  font-size:300%;
+  font-family: sans-serif;
+}
+h2{
+  color:#566573;
+  font-size:200%;
+  Arial,font-family: sans-serif;
+}
+
+input{
+  height:20px;
+  font-size: 20px;
+}
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #333;
+}
+li {
+  float: left;
+}
+li a {
+  display: inline-block;
+  color: white;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+li a:hover {
+  background-color: #111;
+}
+.container {
+  display: flex;
+  width:2000px;
+  height:600px;
+  padding-left:40px;
+  padding-right:20px;
+}
+.container > div {
+  flex: 1; /*grow*/
+}
+#myDiv_left {
+  margin:50px;
+  border: 1px outset black;
+  background-color: #D4EFDF;
+  text-align: center;
+  height:600px;
+  width:600px
+  padding: 20px;
+}
+#myDiv_center{
+  margin:50px;
+  border: none;
+  text-align: center;
+  height:100px;
+  width:10%;
+  padding: 10px;
+}
+#myDiv_right{
+  margin:50px;
+  border: 1px outset black;
+  background-color: #C2DFFF;
+  text-align: center;
+  height:450px;
+  width:30%;
+  padding: 20px;
+}
+#myDiv_left_radio {
+  margin:30px;
+
+  height:140px;
+  border: 1px outset black;
+  background-color: #EAECEE;
+  text-align: center;
+  width:60%;
+  padding: 1px;
+}
+table, th, td {
+    border:1px solid black;
+    border-collapse: collapse;
+    width:30%;
+    padding-left: 30px;
+    padding-right: 40px;
+}
+
+#myDiv_bottom {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  color:#34495E;
+  font-size:300%;
+  font-family: sans-serif;
+}
+
+#search {
+    width: 10em;  height: 20em; white-space: normal;
+}
+
+.submit_button {
+  display: inline-block;
+  padding: 15px 25px;
+  font-size: 24px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+  color: black;
+  background-color: #D5D8DC;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 9px #999;
+}
+
+.submit_button:hover {background-color: #808B96}
+.submit_button:focus {background-color: #808B96}
+
+.submit_button:active {
+  background-color: #808B96;
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
