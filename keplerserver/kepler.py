@@ -29,17 +29,6 @@ class Kepler():
     self.cli.call('pilot_enable',1)
     return ret
 
-  def tuner_test_load(self, tdd, tunerdata):
-    dd_b = tunerdata.tobytes()
-    print('tuner_test_load : tdd {} tunerdata len {} dd_b {} bytes'.format(tdd, len(tunerdata), len(dd_b)))
-    ret = self.cli.call('tuner_test_load',tdd,dd_b)
-    return ret
-    
-  def tuner_test_get(self, tdd):
-    data = self.cli.call('tuner_test_get',tdd)
-    arr = np.frombuffer(data, dtype='float32')
-    return arr
-
   def canxfir_get(self, tdd):
     data = self.cli.call('canxfir_get',tdd)
     arr = np.frombuffer(data, dtype='float32')

@@ -37,6 +37,8 @@
                         }
                         if (data.kstat.gain.search('OSC') >= 0) {
                           document.getElementById("kstat_gain").style.color='red';
+                        } else {
+                          document.getElementById("kstat_gain").style.color='black';
                         }
                     });
           },
@@ -81,6 +83,12 @@
                     <label for="tdd_mode" style="color: black">DL Fixed</label>
                     <input type="radio" name="tdd_mode" value="3" {{"checked=checked" if config.tdd_mode==3}} tabindex="20">
                     <label for="tdd_mode" style="color: black">UL Fixed</label><br><br>
+
+                <dt style="font-size:200%;">LowGain Mode</dt>
+                    <input type="radio" name="lowgain_mode" value="1" {{"checked=checked" if config.lowgain_mode==1}} tabindex="21">
+                    <label for="lowgain_mode" style="color: black">OFF</label>
+                    <input type="radio" name="lowgain_mode" value="2" {{"checked=checked" if config.lowgain_mode==2}} tabindex="23">
+                    <label for="lowgain_mode" style="color: black">ON</label><br><br>
             </div>
 
             <!-- ################################################################################################ -->

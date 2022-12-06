@@ -5,9 +5,8 @@ import os
 
 class Repeater():
 
-  def __init__(self, keplerobj, tddobj):
+  def __init__(self, keplerobj):
     self._kepler = keplerobj
-    self._tdd = tddobj
     self._curconfig = {}
     self._kepler_status = {}
     self._tdd_status = {}
@@ -17,6 +16,7 @@ class Repeater():
     self.MIN_DIG_GAIN = -10.
     self._prev_mode = None
     self._counter = 0
+    self._donorrx_dbm2dbfs = 0.
     self._tstat_h = {}
     self._tstat_v = {}
     self._kstat_h = {}
@@ -27,15 +27,16 @@ class Repeater():
 
     self._tstat_h['status'] = 'TDD Sync'
     self._tstat_h['cellid'] = 'Donor Cell ID'
-    self._tstat_h['rssi'] = 'RSSI      (dBm)'
-    self._tstat_h['rsrp'] = 'SS-RSRP   (dBm)'
     self._tstat_h['lindex'] = 'L-index'
     self._tstat_h['scs'] = 'SCS (kHz)'
     self._tstat_h['band'] = 'Band'
     self._tstat_h['arfcn'] = 'ARFCN'
+    self._tstat_h['ssrssi'] = 'SS-RSSI   (dBm)'
+    self._tstat_h['lastdetected'] = 'Last Seen (ms)'
     self._kstat_h['gain'] = 'Gain (dB)'
     self._kstat_h['center_freq'] = 'Center Frequency (MHz)'
     self._kstat_h['tdd_mode'] = 'TDD Mode'
+    self._kstat_h['lowgain_mode'] = 'LowGain Mode'
     self._kstat_h['agc_on'] = 'Gain Control Mode'
     self._kstat_h['canx_on'] = 'Canx Mode'
     self._kstat_h['dltxpwr'] = 'DL Tx Power (dBm)'
@@ -112,21 +113,30 @@ class Repeater():
     if tdd_mode[0] == 1:
         self._curconfig['tdd_mode'] = 2+tdd_mode[1]
 
-    tdd_band, tdd_arfcn = self._tdd.get_band_arfcn()
-    self._curconfig['band'] = tdd_band
-    self._curconfig['arfcn'] = tdd_arfcn
+    lowgain_mode = self._kepler.call('tuner_lowgain_mode')
+    print("lowgain_mode : {}".format(lowgain_mode))
+    if lowgain_mode == 0:
+        self._curconfig['lowgain_mode'] = 1
+    if lowgain_mode == 1:
+        self._curconfig['lowgain_mode'] = 2
 
-    tdd_status = self._tdd.read_status_simple()
-    self._curconfig['slot1_ul'] = tdd_status['ul_ts1']
-    self._curconfig['slot1_dl'] = tdd_status['dl_ts1']
-    self._curconfig['slot2_ul'] = tdd_status['ul_ts2']
-    self._curconfig['slot2_dl'] = tdd_status['dl_ts2']
-    self._curconfig['ssf_symbols_ul'] = tdd_status['ul_symbols']
-    self._curconfig['ssf_symbols_gp'] = tdd_status['gp_symbols']
-    self._curconfig['ssf_symbols_dl'] = tdd_status['dl_symbols']
+#    tdd_band, tdd_arfcn = self._tdd.get_band_arfcn()
+#    self._curconfig['band'] = tdd_band
+#    self._curconfig['arfcn'] = tdd_arfcn
+    ssb_arfcn, freq_start, freq_stop, freq_step = self._kepler.call('tdd_sync_search_freq')
+    self._curconfig['band'] = 78
+    self._curconfig['arfcn'] = 0 if freq_step > 0 else ssb_arfcn
 
-    self._curconfig['slot1_ul'] = tdd_status['ul_ts1']
-    self._curconfig['slot1_ul'] = tdd_status['ul_ts1']
+#    tdd_status = self._tdd.read_status_simple()
+    tdd_schedule = self._kepler.call('tdd_frame_schedule')
+
+    self._curconfig['slot1_dl'] = tdd_schedule[0]
+    self._curconfig['slot1_ul'] = tdd_schedule[1]
+    self._curconfig['slot2_dl'] = tdd_schedule[2]
+    self._curconfig['slot2_ul'] = tdd_schedule[3]
+    self._curconfig['ssf_symbols_dl'] = tdd_schedule[4]
+    self._curconfig['ssf_symbols_gp'] = tdd_schedule[5]
+    self._curconfig['ssf_symbols_ul'] = tdd_schedule[6]
 
   def change_config(self, newconfig):
     for k, v in newconfig.items():
@@ -148,7 +158,7 @@ class Repeater():
           self._curconfig[k] = int(v)
           if self._curconfig[k] == 1:
             # HW TDD
-            self._kepler.call('tdd_mode', 0, 0)
+            self._kepler.call('tdd_mode', 0, 1)
           elif self._curconfig[k] == 2:
             # DL only
             self._kepler.call('tdd_mode', 1, 0)
@@ -158,16 +168,41 @@ class Repeater():
           else:
             raise RuntimeError('????')
 
+        if k == 'lowgain_mode':
+          print('LowGain Mode : {} -> {}'.format(self._curconfig[k], v))
+          self._curconfig[k] = int(v)
+          if self._curconfig[k] == 1:
+            # Lowgain Mode OFF
+            self._kepler.call('tuner_lowgain_mode', 0)
+          elif self._curconfig[k] == 2:
+            # Lowgain Mode ON
+            self._kepler.call('tuner_lowgain_mode', 1)
+          else:
+            raise RuntimeError('????')
+
         if k in ['arfcn','band','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl']:
           for item in ['arfcn','band','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl']:
             print('{} : {} -> {}'.format(item, self._curconfig[item], newconfig[item]))
             self._curconfig[item] = int(newconfig[item])
-          sync_config = '0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}'.format(  \
-              self._curconfig['slot1_ul'],self._curconfig['slot1_dl'], \
-              self._curconfig['slot2_ul'],self._curconfig['slot2_dl'], \
-              self._curconfig['ssf_symbols_ul'],self._curconfig['ssf_symbols_gp'], \
-              self._curconfig['ssf_symbols_dl'])
-          self._tdd.config(self._curconfig['band'], self._curconfig['arfcn'], sync_config)
+#          sync_config = '0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}'.format(  \
+#              self._curconfig['slot1_ul'],self._curconfig['slot1_dl'], \
+#              self._curconfig['slot2_ul'],self._curconfig['slot2_dl'], \
+#              self._curconfig['ssf_symbols_ul'],self._curconfig['ssf_symbols_gp'], \
+#              self._curconfig['ssf_symbols_dl'])
+#          self._tdd.config(self._curconfig['band'], self._curconfig['arfcn'], sync_config)
+          self._kepler.call('tdd_frame_schedule',  
+              self._curconfig['slot1_dl'],self._curconfig['slot1_ul'], \
+              self._curconfig['slot2_dl'],self._curconfig['slot2_ul'], \
+              self._curconfig['ssf_symbols_dl'],self._curconfig['ssf_symbols_gp'], \
+              self._curconfig['ssf_symbols_ul'])
+          self._kepler.call('tdd_sync_stop')
+          try:
+            if self._curconfig['arfcn'] == 0:
+              self._kepler.call('tdd_sync_start_search',6,1)
+            else:
+              self._kepler.call('tdd_sync_start_search_arfcn',6,1,self._curconfig['arfcn'])
+          except:
+            pass
 
     if 'center_freq' in newconfig.keys() and newconfig['center_freq'] != self._curconfig['center_freq']:
       self._curconfig['center_freq'] = newconfig['center_freq']
@@ -180,6 +215,14 @@ class Repeater():
       self._kepler.call('center_freq', self._curconfig['center_freq']*1e6)
       self._kepler.call('mode', *prev_mode)
       self._kepler.call('pa_enable', *prev_pa)
+      self._kepler.call('tdd_sync_stop')
+      try:
+        if self._curconfig['arfcn'] == 0:
+          self._kepler.call('tdd_sync_start_search',6,1)
+        else:
+          self._kepler.call('tdd_sync_start_search_arfcn',6,1,self.curconfig['arfcn'])
+      except:
+        pass
 
     if 'canx_on' in newconfig.keys() or 'agc_on' in newconfig.keys():
       if newconfig['canx_on'] != self._curconfig['canx_on'] or newconfig['agc_on'] != self._curconfig['agc_on']:
@@ -230,15 +273,6 @@ class Repeater():
       saved_config = pickle.load(f)
     return saved_config
  
-  def keep_pwrs_history(self, adcdac_pwrs):
-    res = []
-    for i in range(12):
-      self._adcdac_pwr_history[i].append(adcdac_pwrs[i])
-      if len(self._adcdac_pwr_history[i]) > self._pwr_history_len:
-        self._adcdac_pwr_history[i].pop(0)
-      res.append(max(self._adcdac_pwr_history[i]))
-    return res
-
   def get_kepler_status(self):
     return self._kstat_h, self._kstat_v
 
@@ -246,20 +280,29 @@ class Repeater():
     return self._tstat_h, self._tstat_v
 
   def fetch_tdd_status(self):
-    rf_status = self._kepler.call('rf_status')
-    stat = self._tdd.read_status_simple()
-    self._tstat_v['status'] = 'OK' if rf_status[1] == 1 else 'SEARCHING'
-    self._tstat_v['cellid'] = str(stat['cell_id'])
-    self._tstat_v['rssi'] = str(stat['rssi'])
-    self._tstat_v['rsrp'] = str(stat['ss_rsrp'])
-    self._tstat_v['lindex'] = str(stat['l_id'])
-    self._tstat_v['scs'] = '15' if stat['sc_interval'] == 0 else '30'
-    self._tstat_v['band'] = 'n' + str(stat['band'])
-    self._tstat_v['arfcn'] = self._curconfig['arfcn']
-    
+#    rf_status = self._kepler.call('rf_status')
+#    stat = self._tdd.read_status_simple()
+#    self._tstat_v['status'] = 'OK' if rf_status[1] == 1 else 'SEARCHING'
+#    self._tstat_v['cellid'] = str(stat['cell_id'])
+#    self._tstat_v['rssi'] = str(stat['rssi'])
+#    self._tstat_v['rsrp'] = str(stat['ss_rsrp'])
+#    self._tstat_v['lindex'] = str(stat['l_id'])
+#    self._tstat_v['scs'] = '15' if stat['sc_interval'] == 0 else '30'
+#    self._tstat_v['band'] = 'n' + str(stat['band'])
+#    self._tstat_v['arfcn'] = self._curconfig['arfcn']
+    stat = self._kepler.call('tdd_sync_status')
+    self._tstat_v['status'] = 'OK' if stat[0] == 2 else 'SEARCHING' if stat[0] == 1 else 'IDLE'
+    self._tstat_v['cellid'] = str(stat[2])
+    self._tstat_v['ssrssi'] = '{:.1f}'.format(stat[4] - self._donorrx_dbm2dbfs)
+    self._tstat_v['lastdetected'] = '{:.1f}'.format(stat[5])
+    self._tstat_v['lindex'] = str(stat[3])
+    self._tstat_v['scs'] = '30'
+    self._tstat_v['band'] = 'n78'
+    self._tstat_v['arfcn'] = str(stat[1])
+
   def fetch_kepler_status(self):
     self._kepler.call('dac_fr_accum_reset')
-    tdd_module_status = self._tdd.read_status_simple()
+#    tdd_module_status = self._tdd.read_status_simple()
     delchan_pwrs = self._kepler.call('get_delchan_pwrs')
     fullchan_pwrs = self._kepler.call('get_fullchan_pwrs')
     current_gain = self._kepler.call('gain')
@@ -269,29 +312,30 @@ class Repeater():
     boxcal_data = self._kepler.call('get_boxcal_data')
     center_freq = self._kepler.call('center_freq')/1e6
     tdd_mode = self._kepler.call('tdd_mode')
+    lowgain_mode = self._kepler.call('tuner_lowgain_mode')
     canx_mode = self._kepler.call('mode')
 
     dl_atten = self._kepler.call('dl_atten')
     ul_atten = self._kepler.call('ul_atten')
     donorrx_dbm2dbfs = (25. - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
+    self._donorrx_dbm2dbfs = donorrx_dbm2dbfs[0]
     donortx_dbfs2dbm = boxcal_data[2:4]
     serverrx_dbm2dbfs = (25. - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
     servertx_dbfs2dbm = boxcal_data[6:8]
     analog_gain = max(np.add(donorrx_dbm2dbfs, servertx_dbfs2dbm))
     self._analog_gain = analog_gain
 
-    adcdac_pwrs_max = self.keep_pwrs_history(adcdac_pwrs)
-
-    dl_tx_pwr = np.add(adcdac_pwrs_max[0:2], servertx_dbfs2dbm)
-    dl_rx_pwr = np.subtract(adcdac_pwrs_max[8:10], donorrx_dbm2dbfs)
-    dl_echo_pwr = np.subtract(adcdac_pwrs_max[4:6], donorrx_dbm2dbfs)
-    ul_tx_pwr = np.add(adcdac_pwrs_max[2:4], donortx_dbfs2dbm)
-    ul_rx_pwr = np.subtract(adcdac_pwrs_max[10:12], serverrx_dbm2dbfs)
-    ul_echo_pwr = np.subtract(adcdac_pwrs_max[6:8], serverrx_dbm2dbfs)
+    dl_tx_pwr = np.add(adcdac_pwrs[12:14], servertx_dbfs2dbm)
+    dl_rx_pwr = np.subtract(adcdac_pwrs[20:22], donorrx_dbm2dbfs)
+    dl_echo_pwr = np.subtract(adcdac_pwrs[16:18], donorrx_dbm2dbfs)
+    ul_tx_pwr = np.add(adcdac_pwrs[14:16], donortx_dbfs2dbm)
+    ul_rx_pwr = np.subtract(adcdac_pwrs[22:24], serverrx_dbm2dbfs)
+    ul_echo_pwr = np.subtract(adcdac_pwrs[18:20], serverrx_dbm2dbfs)
 
     self._kstat_v['gain'] = 'OFF' if self._curconfig['rpt_on'] == 0 else '{:.1f}'.format(analog_gain + current_gain) if accum_status[1] == 0 else '{:.1f} OSC!'.format(analog_gain + current_gain - 12.)
     self._kstat_v['center_freq'] = '{:.3f}'.format(center_freq)
     self._kstat_v['tdd_mode'] = 'Auto' if tdd_mode[0] == 0 else 'DL Only' if tdd_mode[1] == 0 else 'UL Only'
+    self._kstat_v['lowgain_mode'] = 'OFF' if lowgain_mode == 0 else 'ON'
     self._kstat_v['agc_on'] = '-' if self._curconfig['rpt_on'] == 0 else ('Auto' if canx_mode[1] == 1 else 'Manual')
     self._kstat_v['canx_on'] = '-' if self._curconfig['rpt_on'] == 0 else ('ON' if canx_mode[0] == 1 else 'OFF')
     self._kstat_v['dltxpwr'] = ' / '.join('{:.1f}'.format(k) for k in dl_tx_pwr)
@@ -313,9 +357,9 @@ class Repeater():
     self._kstat_v['preisol'] = '{:.1f}  ({:.1f} / {:.1f} / {:.1f} / {:.1f})'.format(max(pre_isol_dl), *pre_isol_dl)
     self._kstat_v['postisol'] = '{:.1f}  ({:.1f} / {:.1f} / {:.1f} / {:.1f})'.format(max(post_isol_dl), *post_isol_dl)
     self._kstat_v['dacpwr'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[0:4])
-    self._kstat_v['dacpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs_max[0:4])
-    self._kstat_v['adcpwr'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[8:12])
-    self._kstat_v['adcpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs_max[8:12])
+    self._kstat_v['dacpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[12:16])
+    self._kstat_v['adcpwr'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[4:8])
+    self._kstat_v['adcpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[16:20])
 
 
 
