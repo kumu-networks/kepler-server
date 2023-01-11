@@ -16,6 +16,11 @@
           $('#result').html(result);
           $('#myform').submit();
         });
+        document.getElementById("rfbw").addEventListener('change', function(event) {
+          var result = $(this).val();
+          $('#result').html(result);
+          $('#myform').submit();
+        });
       });
     </script>
     <script type="text/javascript">
@@ -64,7 +69,27 @@
             <div id="myDiv_left" style="float: left; margin-left: 5%; width: 500px; height:450px;">
                 <dt>RF Parameters</dt><br>
                 <label for="Center Frequency" >Center Frequency (MHz) : </label>
-                <input type="text" name="center_freq" size="10" value={{config.center_freq}} tabindex="13" required><br><br>
+                <input type="text" name="center_freq" size="10" value={{config.center_freq}} tabindex="13" required><br>
+
+                <label for="Bandwidth">        Bandwidth (MHz) : </label>
+                <select name="rfbw" id="rfbw" tabindex="99" required>
+                    <option value="5" {{config.chan_fir_0}}>5</option>
+                    <option value="10" {{config.chan_fir_1}}>10</option>
+                    <option value="15" {{config.chan_fir_2}}>15</option>
+                    <option value="20" {{config.chan_fir_3}}>20</option>
+                    <option value="25" {{config.chan_fir_4}}>25</option>
+                    <option value="30" {{config.chan_fir_5}}>30</option>
+                    <option value="40" {{config.chan_fir_6}}>40</option>
+                    <option value="50" {{config.chan_fir_7}}>50</option>
+                    <option value="60" {{config.chan_fir_8}}>60</option>
+                    <option value="70" {{config.chan_fir_9}}>70</option>
+                    <option value="80" {{config.chan_fir_10}}>80</option>
+                    <option value="90" {{config.chan_fir_11}}>90</option>
+                    <option value="100" {{config.chan_fir_12}}>100</option>
+                    <option value="200" {{config.chan_fir_13}}>200</option>
+                    <option value="999" {{config.chan_fir_byp}}>No Filter</option>
+                </select><br><br>
+
                 <label for="Target Gain" >Target Gain (dB) : </label>
                 <input type="text" name="target_gain" size="16" value={{config.target_gain}} tabindex="14" required><br><br><br>
 

@@ -46,7 +46,8 @@ setup(
         'msgpack_numpy',
         'pyserial',
         'flask',
-        'RPi.GPIO'
+        'RPi.GPIO',
+        'waitress'
     ],
     packages=find_packages(),
     entry_points={'console_scripts': ['keplerserver=keplerserver:main']},

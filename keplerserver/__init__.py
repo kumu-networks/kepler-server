@@ -5,6 +5,7 @@ import numpy as np
 import RPi.GPIO as GPIO
 import time
 import datetime
+from waitress import serve
 
 msgpack_numpy.patch()
 
@@ -130,5 +131,6 @@ _rpt = Repeater(_kepler)
 
 app.config['PROPAGATE_EXCEPTIONS'] = True
 print("Listening on port 5000...")
-app.run(threaded=False, processes=1, debug=True, host='0.0.0.0', port=5000)
+#app.run(threaded=False, processes=1, debug=True, host='0.0.0.0', port=5000)
+serve(app, listen='0.0.0.0:5000', threads=1, connection_limit=20)
 
