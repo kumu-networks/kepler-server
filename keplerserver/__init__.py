@@ -24,6 +24,8 @@ GPIO.setup(gpio_kepler, GPIO.OUT)
 @app.route("/", methods =["GET", "POST"])
 @app.route("/home", methods =["GET", "POST"])
 def index():
+    _rpt.check_alive()
+
     if request.method == "POST":
         output = request.form.to_dict()
         for k, v in output.items():
@@ -46,12 +48,12 @@ def index():
 
 @app.route('/_fetch_status', methods = ['GET'])
 def fetch_status():
-  _rpt.fetch_kepler_status()
-  kstat_h, kstat_v = _rpt.get_kepler_status()
-
-  _rpt.fetch_tdd_status()
-  tstat_h, tstat_v = _rpt.get_tdd_status()
-  return jsonify({"kstat": kstat_v, "tstat":tstat_v})
+    _rpt.check_alive()
+    _rpt.fetch_kepler_status()
+    kstat_h, kstat_v = _rpt.get_kepler_status()
+    _rpt.fetch_tdd_status()
+    tstat_h, tstat_v = _rpt.get_tdd_status()
+    return jsonify({"kstat": kstat_v, "tstat":tstat_v})
 
 
 @app.route('/api/reset_ue')
@@ -120,6 +122,10 @@ def kepler_dispatch(command):
         args = [float(k) if '.' in k else int(k) for k in arglist]
         ret = _kepler.call(method, *args)
         return Response(str(ret), mimetype='text/html')
+
+@app.route('/check_alive')
+def kepler_check_alive():
+    _rpt.check_alive()
 
 try:
     _kepler = Kepler(port=port_kepler)

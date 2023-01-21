@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import time
 import os
+import datetime
 
 class Repeater():
 
@@ -22,6 +23,7 @@ class Repeater():
     self._kstat_h = {}
     self._kstat_v = {}
     self._bw_values = [5,10,15,20,25,30,40,50,60,70,80,90,100,200]
+    self._prev_uptime = 0.
     self.init()
 
   def init(self):
@@ -52,6 +54,7 @@ class Repeater():
     self._kstat_h['dacpwr_max'] = 'DAC Max Power (dBFS)'
     self._kstat_h['adcpwr'] = 'ADC Inst Power (dBFS)'
     self._kstat_h['adcpwr_max'] = 'ADC Max Power (dBFS)'
+    self._kstat_h['uptime'] = 'Up Time'
 
     self._kepler.call('vendor', 1)
 
@@ -308,6 +311,11 @@ class Repeater():
     analog_gain = max(np.add(donorrx_dbm2dbfs, servertx_dbfs2dbm))
     self._analog_gain = analog_gain
 
+    self._curconfig['dl_rx_1'] = dl_atten[2]
+    self._curconfig['dl_rx_2'] = dl_atten[3]
+    self._curconfig['ul_rx_1'] = ul_atten[2]
+    self._curconfig['ul_rx_2'] = ul_atten[3]
+
     if 'target_gain' in newconfig.keys() and newconfig['target_gain'] != self._curconfig['target_gain']:
       print('Target Gain : {} -> {}'.format(self._curconfig['target_gain'], newconfig['target_gain']))
       self._curconfig['target_gain'] = int(newconfig['target_gain'])
@@ -362,6 +370,13 @@ class Repeater():
     self._tstat_v['scs'] = '30'
     self._tstat_v['band'] = 'n78'
     self._tstat_v['arfcn'] = str(stat[1])
+
+  def check_alive(self):
+    uptime = self._kepler.call('secs_alive')
+    if uptime < self._prev_uptime:
+      print("!!!!!!!!!!!!!! Module rebooted !?!? Re-initializing the module..")
+      self.init()
+    self._prev_uptime = uptime
 
   def fetch_kepler_status(self):
     self._kepler.call('dac_fr_accum_reset')
@@ -426,7 +441,13 @@ class Repeater():
     self._kstat_v['dacpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[12:16])
     self._kstat_v['adcpwr'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[4:8])
     self._kstat_v['adcpwr_max'] = 'DL {:.1f} / {:.1f}   UL {:.1f} / {:.1f}'.format(*adcdac_pwrs[16:20])
+    
+    str_tm = str(datetime.timedelta(seconds=self._prev_uptime))
+    if ',' in str_tm:
+        day = str_tm.split(',')[0]
+        hour, minute, second = str_tm.split(',')[1].split(':')
+    else:
+        day = ''
+        hour, minute, second = str_tm.split(':')
 
-
-
-
+    self._kstat_v['uptime'] = '{}{} hour {} min {} sec'.format(day, hour, minute, int(float(second)))
