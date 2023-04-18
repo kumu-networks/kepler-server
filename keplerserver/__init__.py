@@ -5,6 +5,7 @@ import numpy as np
 import RPi.GPIO as GPIO
 import time
 import datetime
+import shlex
 from waitress import serve
 
 msgpack_numpy.patch()
@@ -31,6 +32,8 @@ def index():
         for k, v in output.items():
           if k in ['center_freq', 'target_gain']:
             output[k] = float(v)
+          elif k in ['tdd_blanking']:
+            output[k] = v
           else:
             output[k] = int(v)
         _rpt.change_config(output)
@@ -117,9 +120,14 @@ def kepler_dispatch(command):
         data = _kepler.canxfir_get(tdd)
         return Response(msgpack.packb(data, use_bin_type=True), mimetype='application/x-msgpack')
     else:
-        method = command.split(',')[0]
-        arglist = command.split(',')[1:]
-        args = [float(k) if '.' in k else int(k) for k in arglist]
+        aa = shlex.shlex(command)
+        aa.whitespace += ','
+        aa.whitespace_split = True
+        cmd_list = list(aa)
+        method = cmd_list[0]
+        arglist = cmd_list[1:]
+        args = [k[1:-1] if '"' in k else (float(k) if '.' in k else int(k)) for k in arglist]
+        print(command, args)
         ret = _kepler.call(method, *args)
         return Response(str(ret), mimetype='text/html')
 

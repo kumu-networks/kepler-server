@@ -32,7 +32,6 @@ class Repeater():
     self._tstat_h['cellid'] = 'Donor Cell ID'
     self._tstat_h['lindex'] = 'L-index'
     self._tstat_h['scs'] = 'SCS (kHz)'
-    self._tstat_h['band'] = 'Band'
     self._tstat_h['arfcn'] = 'ARFCN'
     self._tstat_h['ssrssi'] = 'SS-RSSI   (dBm)'
     self._tstat_h['lastdetected'] = 'Last Seen (ms)'
@@ -61,16 +60,20 @@ class Repeater():
     boxcal_data = self._kepler.call('get_boxcal_data')
     dl_atten = self._kepler.call('dl_atten')
     ul_atten = self._kepler.call('ul_atten')
-    donorrx_dbm2dbfs = (25. - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
+    donorrx_dbm2dbfs = (boxcal_data[8] - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
     donortx_dbfs2dbm = boxcal_data[2:4]
-    serverrx_dbm2dbfs = (25. - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
+    serverrx_dbm2dbfs = (boxcal_data[9] - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
     servertx_dbfs2dbm = boxcal_data[6:8]
     analog_gain = max(np.add(donorrx_dbm2dbfs, servertx_dbfs2dbm))
     self._analog_gain = analog_gain
+    print("analog gain : {}".format(analog_gain))
 
      # do initial boot-up things
     self.fetch_curconfig()
-    saved_config = self.load_config()
+    try:
+        saved_config = self.load_config()
+    except:
+        saved_config = None
     if saved_config != None:
       print('Found saved config, applying..')
       try:
@@ -94,7 +97,7 @@ class Repeater():
     else:
         # auto gain
         rpt_params = self._kepler.call('repeater_params')
-        self._curconfig['target_gain'] = int(rpt_params[1] + self._analog_gain)
+        self._curconfig['target_gain'] = int(rpt_params[0] + self._analog_gain)
 
 #print('Fetching Curconfig : target gain {} analog gain {}'.format(self._curconfig['target_gain'], self._analog_gain))
     pa_en = self._kepler.call('pa_enabled')
@@ -146,7 +149,6 @@ class Repeater():
 #    self._curconfig['band'] = tdd_band
 #    self._curconfig['arfcn'] = tdd_arfcn
     ssb_arfcn, freq_start, freq_stop, freq_step = self._kepler.call('tdd_sync_search_freq')
-    self._curconfig['band'] = 78
     self._curconfig['arfcn'] = 0 if freq_step > 0 else ssb_arfcn
 
 #    tdd_status = self._tdd.read_status_simple()
@@ -159,6 +161,7 @@ class Repeater():
     self._curconfig['ssf_symbols_dl'] = tdd_schedule[4]
     self._curconfig['ssf_symbols_gp'] = tdd_schedule[5]
     self._curconfig['ssf_symbols_ul'] = tdd_schedule[6]
+    self._curconfig['tdd_blanking'] = tdd_schedule[7]
 
   def change_config(self, newconfig):
     for k, v in newconfig.items():
@@ -224,37 +227,49 @@ class Repeater():
               else:
                 self._kepler.call('tdd_sync_start_search',6,1, self._curconfig['center_freq']*1e6 - self._curconfig['rfbw']*1e6/2, self._curconfig['center_freq']*1e6 + self._curconfig['rfbw']*1e6/2)
             else:
-              self._kepler.call('tdd_sync_start_search_arfcn',6,1,self.curconfig['arfcn'])
+              self._kepler.call('tdd_sync_start_search_arfcn',6,1,self._curconfig['arfcn'])
           except:
             pass
 
 
-        if k in ['arfcn','band','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl']:
-          for item in ['arfcn','band','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl']:
+        if k in ['arfcn','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl', 'tdd_blanking']:
+          for item in ['arfcn','slot1_ul','slot1_dl','slot2_ul','slot2_dl','ssf_symbols_ul','ssf_symbols_gp','ssf_symbols_dl', 'tdd_blanking']:
             print('{} : {} -> {}'.format(item, self._curconfig[item], newconfig[item]))
-            self._curconfig[item] = int(newconfig[item])
+            if item == 'tdd_blanking':
+              self._curconfig[item] = newconfig[item]
+            else:
+              self._curconfig[item] = int(newconfig[item])
 #          sync_config = '0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}0{:X}'.format(  \
 #              self._curconfig['slot1_ul'],self._curconfig['slot1_dl'], \
 #              self._curconfig['slot2_ul'],self._curconfig['slot2_dl'], \
 #              self._curconfig['ssf_symbols_ul'],self._curconfig['ssf_symbols_gp'], \
 #              self._curconfig['ssf_symbols_dl'])
 #          self._tdd.config(self._curconfig['band'], self._curconfig['arfcn'], sync_config)
-          self._kepler.call('tdd_frame_schedule',  
+          print("tdd_blanking : {}, len {}".format(self._curconfig['tdd_blanking'], len(self._curconfig['tdd_blanking'])))
+          if len(self._curconfig['tdd_blanking']) == 0:
+            self._kepler.call('tdd_frame_schedule',  
               self._curconfig['slot1_dl'],self._curconfig['slot1_ul'], \
               self._curconfig['slot2_dl'],self._curconfig['slot2_ul'], \
               self._curconfig['ssf_symbols_dl'],self._curconfig['ssf_symbols_gp'], \
               self._curconfig['ssf_symbols_ul'])
+          else:
+            self._kepler.call('tdd_frame_schedule',  
+              self._curconfig['slot1_dl'],self._curconfig['slot1_ul'], \
+              self._curconfig['slot2_dl'],self._curconfig['slot2_ul'], \
+              self._curconfig['ssf_symbols_dl'],self._curconfig['ssf_symbols_gp'], \
+              self._curconfig['ssf_symbols_ul'],self._curconfig['tdd_blanking'])
           self._kepler.call('tdd_sync_stop')
-          try:
-            if self._curconfig['arfcn'] == 0:
-              if self._curconfig['rfbw'] == 999:
-                self._kepler.call('tdd_sync_start_search',6,1)
+          if self._kepler.call('center_freq') > 3e9:
+            try:
+              if self._curconfig['arfcn'] == 0:
+                if self._curconfig['rfbw'] == 999:
+                  self._kepler.call('tdd_sync_start_search',6,1)
+                else:
+                  self._kepler.call('tdd_sync_start_search',6,1, self._curconfig['center_freq']*1e6 - self._curconfig['rfbw']*1e6/2, self._curconfig['center_freq']*1e6 + self._curconfig['rfbw']*1e6/2)
               else:
-                self._kepler.call('tdd_sync_start_search',6,1, self._curconfig['center_freq']*1e6 - self._curconfig['rfbw']*1e6/2, self._curconfig['center_freq']*1e6 + self._curconfig['rfbw']*1e6/2)
-            else:
-              self._kepler.call('tdd_sync_start_search_arfcn',6,1,self._curconfig['arfcn'])
-          except:
-            pass
+                self._kepler.call('tdd_sync_start_search_arfcn',6,1,self._curconfig['arfcn'])
+            except:
+              pass
 
     if 'center_freq' in newconfig.keys() and newconfig['center_freq'] != self._curconfig['center_freq']:
       self._curconfig['center_freq'] = newconfig['center_freq']
@@ -275,7 +290,7 @@ class Repeater():
           else:
             self._kepler.call('tdd_sync_start_search',6,1, self._curconfig['center_freq']*1e6 - self._curconfig['rfbw']*1e6/2, self._curconfig['center_freq']*1e6 + self._curconfig['rfbw']*1e6/2)
         else:
-          self._kepler.call('tdd_sync_start_search_arfcn',6,1,self.curconfig['arfcn'])
+          self._kepler.call('tdd_sync_start_search_arfcn',6,1,self._curconfig['arfcn'])
       except:
         pass
 
@@ -304,12 +319,13 @@ class Repeater():
     boxcal_data = self._kepler.call('get_boxcal_data')
     dl_atten = self._kepler.call('dl_atten')
     ul_atten = self._kepler.call('ul_atten')
-    donorrx_dbm2dbfs = (25. - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
+    donorrx_dbm2dbfs = (boxcal_data[8] - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
     donortx_dbfs2dbm = boxcal_data[2:4]
-    serverrx_dbm2dbfs = (25. - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
+    serverrx_dbm2dbfs = (boxcal_data[9] - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
     servertx_dbfs2dbm = boxcal_data[6:8]
     analog_gain = max(np.add(donorrx_dbm2dbfs, servertx_dbfs2dbm))
     self._analog_gain = analog_gain
+    print("analog gain = {}".format(analog_gain))
 
     self._curconfig['dl_rx_1'] = dl_atten[2]
     self._curconfig['dl_rx_2'] = dl_atten[3]
@@ -328,7 +344,7 @@ class Repeater():
       else:
         # auto gain
         rpt_params = self._kepler.call('repeater_params')
-        rpt_params[1] = self._curconfig['target_gain'] - self._analog_gain
+        rpt_params[0] = self._curconfig['target_gain'] - self._analog_gain
         self._kepler.call('repeater_params', *rpt_params)
     self.save_config()  
 
@@ -368,7 +384,6 @@ class Repeater():
     self._tstat_v['lastdetected'] = '{:.1f}'.format(stat[5])
     self._tstat_v['lindex'] = str(stat[3])
     self._tstat_v['scs'] = '30'
-    self._tstat_v['band'] = 'n78'
     self._tstat_v['arfcn'] = str(stat[1])
 
   def check_alive(self):
@@ -395,10 +410,10 @@ class Repeater():
 
     dl_atten = self._kepler.call('dl_atten')
     ul_atten = self._kepler.call('ul_atten')
-    donorrx_dbm2dbfs = (25. - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
+    donorrx_dbm2dbfs = (boxcal_data[8] - np.array(dl_atten[2:4])/4) + boxcal_data[0:2]
     self._donorrx_dbm2dbfs = donorrx_dbm2dbfs[0]
     donortx_dbfs2dbm = boxcal_data[2:4]
-    serverrx_dbm2dbfs = (25. - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
+    serverrx_dbm2dbfs = (boxcal_data[9] - np.array(ul_atten[2:4])/4) + boxcal_data[4:6]
     servertx_dbfs2dbm = boxcal_data[6:8]
     analog_gain = max(np.add(donorrx_dbm2dbfs, servertx_dbfs2dbm))
     self._analog_gain = analog_gain

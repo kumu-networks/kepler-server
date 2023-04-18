@@ -153,12 +153,10 @@
             <!-- ################################################################################################## -->
 
             <div id="myDiv_right" style="float: right; height:400px;">
-                <dt>TDD Sync Parameters</dt><br><br>
+                <dt>TDD Sync Parameters</dt><br>
 
                     <label for="arfcn" >ARFCN :  </label>
-                    <input type="text" name="arfcn" size="18" value={{config.arfcn}} tabindex="22" required><br>
-                    <label for="band" >Band  : </label>
-                    <input type="text" name="band" size="21" value={{config.band}} tabindex="23" required><br><br>
+                    <input type="text" name="arfcn" size="18" value={{config.arfcn}} tabindex="22" required><br><br>
 
                     <label for="Slot1 DL">Slot 1 - DL slots : </label>
                     <input type="text"  name="slot1_dl" size="12" value={{config.slot1_dl}} tabindex="24" required><br>
@@ -177,6 +175,10 @@
                     <input type="text" name="ssf_symbols_gp" size="5" value={{config.ssf_symbols_gp}} tabindex="29" required><br>
                     <label for="special SF - #UL symbols" >Special SF - UL symbols : </label>
                     <input type="text" name="ssf_symbols_ul" size="5" value={{config.ssf_symbols_ul}} tabindex="30" required><br><br>
+
+                    <label for="blanking_syms" >Blanking Syms : </label>
+                    <input type="text" name="tdd_blanking" size="12" value="{{config.tdd_blanking}}" tabindex="31"><br>
+                    <label for="blanking_desc" >(Symbol Ranges, e.g., "48:51,70:83") : </label><br><br>
 
             </div>
         </div>
@@ -212,65 +214,6 @@
 
             </table>
         </div>
-<!--
-    <div class="container" style="padding-left:100px; padding-right:1px;">
-        <form action="/status_repeater" method="post">
-            <div id="myDiv_left_radio" style=width:350px;">
-                <fieldset id="group1" style="height:20; border: none;">
-                    <dt style="font-size:200%;">Repeater</dt>
-                        <input type="radio" name="r_set" value="1" tabindex="1">
-                        <label for="r_set" style="color: green">ON</label>
-                        <input type="radio" name="r_set"  value="0" checked="checked" tabindex="2">
-                        <label for="r_set" style="color: red">OFF</label><br><br>
-
-                        <input type="submit" style="height:35px; font-size:25px" tabindex="3" value="Submit">
-                </fieldset><br>
-            </div>
-        </form>
-
-        <form action="/status_canx" method="post">
-            <div id="myDiv_left_radio" style="width:350px;">
-                <fieldset id="group2" style="height:20; border: none;">
-                    <dt style="font-size:200%;">Cancellation</dt>
-                        <input type="radio" name="canx_set" value="1" tabindex="4">
-                        <label for="canx_set" style="color: green">ON</label>
-                        <input type="radio" name="canx_set"  value="0" checked="checked" tabindex="5">
-                        <label for="canx_set" style="color: red">OFF</label><br><br>
-
-                        <input type="submit" style="height:35px; font-size:25px" tabindex="6" value="Submit">
-                </fieldset><br>
-            </div>
-        </form>
-
-        <form action="/status_gain_control" method="post">
-            <div id="myDiv_left_radio" style=width:350px;">
-                <fieldset id="group3" style="height:20; border: none;">
-                    <dt style="font-size:200%;">Gain Control</dt>
-                        <input type="radio" name="gain_control" value="1" tabindex="7">
-                        <label for="gain_control" style="color: green">Auto</label>
-                        <input type="radio" name="gain_control"  value="0" checked="checked" tabindex="8">
-                        <label for="gain_control" style="color: red">Manual</label><br><br>
-
-                        <input type="submit" style="height:35px; font-size:25px" tabindex="9" value="Submit">
-                </fieldset><br>
-            </div>
-        </form>
-
-        <form action="/status_sync_module_reset" method="post">
-            <div id="myDiv_left_radio" style=width:350px;">
-                <fieldset id="group5" style="height:20; border: none;">
-                    <dt style="font-size:200%;">Sync Module Reset?</dt>
-                        <input type="radio" name="sync_module_reset" value="1" tabindex="10">
-                        <label for="sync_module_reset" style="color: green">Yes</label>
-                        <input type="radio" name="sync_module_reset"  value="0" checked="checked" tabindex="11">
-                        <label for="sync_module_reset" style="color: red">No</label><br><br>
-
-                        <input type="submit" style="height:35px; font-size:25px" tabindex="12" value="submit">
-                </fieldset><br>
-            </div>
-        </form>
-    </div>
--->
 
     </body>
 <!--  </center> -->
